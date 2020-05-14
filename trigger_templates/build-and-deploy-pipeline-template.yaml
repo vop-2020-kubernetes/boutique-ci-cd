@@ -1,0 +1,55 @@
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerTemplate
+metadata:
+  name: build-and-deploy-pipeline-template
+  namespace: tekton-pipelines-run
+spec:
+  params:
+  - name: gitrevision
+    description: The git revision
+    default: master
+  - name: gitrepositoryurl
+    description: The git repository url
+  - name: imageTag
+    description: The docker image Tag
+  - name: imageName
+  - name: imageRepository
+    description: The docker repository to use
+  resourcetemplates:
+  - apiVersion: tekton.dev/v1beta1
+    kind: PipelineRun
+    metadata:
+      generateName: build-and-deploy-pipeline-run-
+      annotations:
+        argocd.argoproj.io/compare-options: IgnoreExtraneous
+    spec:
+      serviceAccountName: pipeline-account
+      pipelineRef:
+        name: build-and-deploy-pipeline
+      params:
+      - name: gitUrl
+        value: $(params.gitrepositoryurl)
+      - name: gitRevision
+        value: $(params.gitrevision)
+      - name: pathToYamlFile
+        value: deploy/deploy.yaml
+      - name: imageUrl
+        value: harbor.c0.kube8.ga/$(params.imageRepository)
+      - name: imageTag
+        value: $(params.imageTag)
+      - name: imageName
+        value: $(params.imageName)
+      - name: gitDestination
+        value: https://gitlab.c0.kube8.ga/boutique/kubernetes.git
+      workspaces:
+      - name: git-source
+        volumeClaimTemplate:
+          metadata:
+            name: pipeline-pvc
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            storageClassName: rook-ceph-block
+            resources:
+              requests:
+                storage: 1Gi

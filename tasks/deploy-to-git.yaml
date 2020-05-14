@@ -1,0 +1,45 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: deploy-to-git
+spec:
+  workspaces:
+    - name: git-source
+      description: The git repo
+  params:
+    - name: imageUrl
+      description: Image name including repository
+    - name: imageTag
+      description: Image tag
+      default: "latest"
+    - name: imageName
+      description: Name of the image      
+    - name: gitDestination
+      description: git url where to deploy
+    - name: branch
+      description: git branch to deploy to
+  steps:
+    - name: update-file
+      image: mikefarah/yq
+      command: ["yq"]
+      args:
+        - "w"
+        - $(workspaces.git-source.path)/destination-$(params.branch)/$(params.imageName)/deployment.yaml
+        - "spec.template.spec.containers[0].image"
+        - $(params.imageUrl):$(params.imageTag)
+        - "-i"
+    - name: push
+      image: alpine/git
+      script: |
+        git config --global user.email "tekton@cloud.com"
+        git config --global user.name "Tekton Pipeline"
+
+        cd $(workspaces.git-source.path)/destination-$(params.branch)
+        git pull origin $(params.branch)
+        git add . 
+        git commit --allow-empty -m "Updating deployment $(params.imageName) to use version $(params.imageTag)"
+        git branch $(params.imageName)
+        git checkout $(params.branch)
+        git pull
+        git merge $(params.imageName)
+        git push origin $(params.branch) -o merge_request.create

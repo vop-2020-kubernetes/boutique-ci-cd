@@ -1,0 +1,17 @@
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: EventListener
+metadata:
+  name: gitlab-listener-interceptor
+  namespace: tekton-pipelines-run
+spec:
+  serviceAccountName: eventlistener-account
+  triggers:
+    - name: gitlab-push
+      interceptors:
+        - gitlab:
+            eventTypes:
+              - Push Hook
+      bindings:
+        - name: build-and-deploy-pipeline-push-binding
+      template:
+        name: build-and-deploy-pipeline-template

@@ -1,0 +1,17 @@
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerBinding
+metadata:
+  name: build-and-deploy-pipeline-push-binding
+  namespace: tekton-pipelines-run
+spec:
+  params:
+  - name: gitrevision
+    value: $(body.checkout_sha)
+  - name: gitrepositoryurl
+    value: $(body.project.http_url)
+  - name: imageTag
+    value: $(body.checkout_sha)
+  - name: imageRepository
+    value: $(body.project.path_with_namespace)
+  - name: imageName
+    value: $(body.project.name)
